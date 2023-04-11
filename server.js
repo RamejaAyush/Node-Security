@@ -24,5 +24,5 @@ https
     app
   )
   .listen(PORT, () => {
-    console.log(`server is rinning on https://localhost:${PORT}`)
+    console.log(`server is running on https://localhost:${PORT}`)
   })
