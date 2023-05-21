@@ -5,8 +5,13 @@ const https = require('https');
 const helmet = require('helmet');
 const express = require('express');
 const passport = require('passport');
+const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const { Strategy } = require('passport-google-oauth20');
+const { bigqueryInstance } = require('./Utils/bigqueryInstance');
+
+// routes
+const createRequest = require('./Routes/request.create');
 
 const PORT = 3000;
 
@@ -45,6 +50,11 @@ passport.deserializeUser((id, done) => {
 });
 
 const app = express();
+// Parse URL-encoded bodies
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// Parse JSON bodies
+app.use(bodyParser.json());
 
 app.use(helmet());
 
@@ -74,6 +84,12 @@ const checkLoggedIn = (req, res, next) => {
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+app.get('/request', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'raiseRequest.html'));
+});
+
+app.use('/request/create', createRequest);
 
 app.get(
   '/auth/google',
@@ -108,14 +124,21 @@ app.get('failure', (req, res) => {
   return res.send('Failed To log in!');
 });
 
-https
-  .createServer(
-    {
-      key: fs.readFileSync('key.pem'),
-      cert: fs.readFileSync('cert.pem'),
-    },
-    app
-  )
-  .listen(PORT, () => {
-    console.log(`server is running on https://localhost:${PORT}`);
-  });
+const startServer = async () => {
+  const bigquery = await bigqueryInstance('./config/config.json');
+  const projectId = bigquery.projectId;
+  https
+    .createServer(
+      {
+        key: fs.readFileSync('key.pem'),
+        cert: fs.readFileSync('cert.pem'),
+      },
+      app
+    )
+    .listen(PORT, () => {
+      console.log(`Bigquery connected with project: ${projectId}`);
+      console.log(`server is running on https://localhost:${PORT}`);
+    });
+};
+
+startServer();
